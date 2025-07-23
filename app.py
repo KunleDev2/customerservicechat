@@ -3,20 +3,20 @@ from langchain.chains import RetrievalQA
 from langchain.chat_models import ChatOpenAI
 from langchain.vectorstores import Chroma
 from langchain.embeddings.openai import OpenAIEmbeddings
+from dotenv import load_dotenv
 import os
 
-# Set your OpenAI API key
-os.environ["OPENAI_API_KEY"] = "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"
+load_dotenv()  # Optional, for local development
 
 app = Flask(__name__)
 
-# Load the vector DB with OpenAI embedding
-embedding = OpenAIEmbeddings()
+# Use environment variable
+openai_api_key = os.getenv("OPENAI_API_KEY")
+
+embedding = OpenAIEmbeddings(openai_api_key=openai_api_key)
 db = Chroma(persist_directory="rag_db", embedding_function=embedding)
 retriever = db.as_retriever()
-
-# Use GPT-3.5 or GPT-4
-llm = ChatOpenAI(model_name="gpt-3.5-turbo")
+llm = ChatOpenAI(openai_api_key=openai_api_key, model_name="gpt-3.5-turbo")
 
 qa = RetrievalQA.from_chain_type(
     llm=llm,
@@ -33,11 +33,9 @@ def ask_question():
         return jsonify({"error": "No question provided"}), 400
     
     try:
-        answer = qa.run(question)  # Use `.run()` to get string, not a dict
-        print(f"Received answer: {answer}")
-        return jsonify({"Response": answer})  # Capital 'R' to match C# model
+        answer = qa.run(question)
+        return jsonify({"Response": answer})
     except Exception as e:
-        print(f"Error processing question: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
