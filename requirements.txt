@@ -6,3 +6,4 @@ langchain
 chromadb
 tiktoken
 python-dotenv
+gunicorn
