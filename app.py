@@ -8,7 +8,8 @@ import os
 
 load_dotenv()
 
-openai_api_key = os.getenv("OPENAI_API_KEY")
+# openai_api_key = os.getenv("OPENAI_API_KEY")
+openai_api_key = "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"
 
 if not openai_api_key:
     raise EnvironmentError("OPENAI_API_KEY not set in the environment.")
