@@ -26,7 +26,7 @@ if not os.path.exists(CHROMA_DB_PATH):
 db = Chroma(persist_directory=CHROMA_DB_PATH, embedding_function=embedding)
 retriever = db.as_retriever()
 
-llm = ChatOpenAI(model_name="gpt-3.5-turbo")
+llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
 
 qa = RetrievalQA.from_chain_type(
     llm=llm,
