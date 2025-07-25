@@ -8,28 +8,34 @@ import os
 
 load_dotenv()
 
+openai_api_key = os.getenv("OPENAI_API_KEY")
+
+if not openai_api_key:
+    raise EnvironmentError("OPENAI_API_KEY not set in the environment.")
+
+os.environ["OPENAI_API_KEY"] = openai_api_key
+
 app = Flask(__name__)
 
-openai_api_key = os.getenv("OPENAI_API_KEY")
-if not openai_api_key:
-    raise ValueError("OPENAI_API_KEY is not set in environment variables")
+embedding = OpenAIEmbeddings()
+CHROMA_DB_PATH = "rag_db"
 
-try:
-    embedding = OpenAIEmbeddings(openai_api_key=openai_api_key)
-    db = Chroma(persist_directory="rag_db", embedding_function=embedding)
-    retriever = db.as_retriever()
-    llm = ChatOpenAI(openai_api_key=openai_api_key, model_name="gpt-3.5-turbo")
-    qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever)
-except Exception as e:
-    print(f"Error during initialization: {e}")
-    retriever = None
-    qa = None
+if not os.path.exists(CHROMA_DB_PATH):
+    raise FileNotFoundError(f"Chroma DB folder '{CHROMA_DB_PATH}' not found.")
+
+db = Chroma(persist_directory=CHROMA_DB_PATH, embedding_function=embedding)
+retriever = db.as_retriever()
+
+llm = ChatOpenAI(model_name="gpt-3.5-turbo")
+
+qa = RetrievalQA.from_chain_type(
+    llm=llm,
+    chain_type="stuff",
+    retriever=retriever,
+)
 
 @app.route('/ask', methods=['POST'])
 def ask_question():
-    if not qa:
-        return jsonify({"error": "QA system failed to initialize"}), 500
-
     data = request.json
     question = data.get('message', '').strip()
 
@@ -38,9 +44,11 @@ def ask_question():
 
     try:
         answer = qa.run(question)
+        print(f"Answer: {answer}")
         return jsonify({"Response": answer})
     except Exception as e:
+        print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5005)
+    app.run(host="0.0.0.0", port=5005, debug=True)
