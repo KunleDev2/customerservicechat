@@ -24,9 +24,9 @@ if not os.path.exists(CHROMA_DB_PATH):
     raise FileNotFoundError(f"Chroma DB folder '{CHROMA_DB_PATH}' not found.")
 
 db = Chroma(persist_directory=CHROMA_DB_PATH, embedding_function=embedding)
-retriever = db.as_retriever()
+retriever = db.as_retriever(search_kwargs={"k": 3})
 
-llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0, streaming=True)
 
 qa = RetrievalQA.from_chain_type(
     llm=llm,
