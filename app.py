@@ -9,7 +9,7 @@ import os
 load_dotenv()
 
 # openai_api_key = os.getenv("OPENAI_API_KEY")
-openai_api_key = "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"
+openai_api_key = "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"  # replace with secure loading for production
 
 if not openai_api_key:
     raise EnvironmentError("OPENAI_API_KEY not set in the environment.")
@@ -44,7 +44,7 @@ def ask_question():
         return jsonify({"error": "No question provided"}), 400
 
     try:
-        answer = qa.run(question)
+        answer = qa.invoke({"query": question})
         print(f"Answer: {answer}")
         return jsonify({"Response": answer})
     except Exception as e:
