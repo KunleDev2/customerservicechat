@@ -1,8 +1,7 @@
 from flask import Flask, request, jsonify
-from langchain.chains import RetrievalQA
-from langchain.chat_models import ChatOpenAI
-from langchain.vectorstores import Chroma
-from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_chroma import Chroma
+from langchain.agents import create_agent
 from dotenv import load_dotenv
 import os
 
@@ -26,24 +25,64 @@ if not os.path.exists(CHROMA_DB_PATH):
 db = Chroma(persist_directory=CHROMA_DB_PATH, embedding_function=embedding)
 retriever = db.as_retriever(search_kwargs={"k": 3})
 
-llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0, streaming=True)
+llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
 
-qa = RetrievalQA.from_chain_type(
-    llm=llm,
-    chain_type="stuff",
-    retriever=retriever,
+def search_knowledge_base(question: str) -> str:
+    """Search the customer service knowledge base for relevant information."""
+    documents = retriever.invoke(question)
+
+    if not documents:
+        return "No relevant information was found in the knowledge base."
+
+    return "\n\n".join(
+        document.page_content
+        for document in documents
+    )
+
+agent = create_agent(
+    model=llm,
+    tools=[search_knowledge_base],
+    system_prompt="""
+You are a very useful and helpful customer service assistant.
+
+Use the search_knowledge_base tool to find information from the company's knowledge base.
+
+Answer the user's question using the information returned by the knowledge base.
+
+If you cannot find the answer in the knowledge base, say:
+"I do not have enough information to answer the question."
+
+Do not invent or guess information.
+"""
 )
 
 @app.route('/ask', methods=['POST'])
 def ask_question():
     data = request.json
+
+    if not data:
+        return jsonify({"error": "Invalid JSON"}), 400
+    
     question = data.get('message', '').strip()
 
     if not question:
         return jsonify({"error": "No question provided"}), 400
-
+    
     try:
-        answer = qa.invoke({"query": question})
+        result = agent.invoke(
+            {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": question
+                    }
+                ]
+            }
+            )
+        
+        answer = result["messages"][-1].content
+
+        print(f"Question: {question}")
         print(f"Answer: {answer}")
         return jsonify({"Response": answer})
     except Exception as e:
