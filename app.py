@@ -2,10 +2,14 @@ from flask import Flask, request, jsonify
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_chroma import Chroma
 from langchain.agents import create_agent
+from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
+
+app = Flask(__name__)
+CORS(app)
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
@@ -13,8 +17,6 @@ if not openai_api_key:
     raise EnvironmentError("OPENAI_API_KEY not set in the environment.")
 
 os.environ["OPENAI_API_KEY"] = openai_api_key
-
-app = Flask(__name__)
 
 embedding = OpenAIEmbeddings()
 CHROMA_DB_PATH = "rag_db"
@@ -59,6 +61,7 @@ Do not invent or guess information.
 @app.route('/ask', methods=['POST'])
 def ask_question():
     data = request.json
+    print("data", data)
 
     if not data:
         return jsonify({"error": "Invalid JSON"}), 400
